@@ -20,7 +20,11 @@ func newUDPSocket(dial DialFn, addr string) (*udpSocket, error) {
 }
 
 func (s *udpSocket) close() {
-	s.conn.Close()
+	err := s.conn.Close()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 }
 
 func (s *udpSocket) send(payload []byte) error {
@@ -35,7 +39,7 @@ func (s *udpSocket) send(payload []byte) error {
 }
 
 func (s *udpSocket) receivePacket() ([]byte, error) {
-	if err := s.conn.SetReadDeadline(time.Now().Add(1 * time.Second)); err != nil {
+	if err := s.conn.SetReadDeadline(time.Now().Add(socketTimeout)); err != nil {
 		return nil, err
 	}
 	buf := make([]byte, 1500)
