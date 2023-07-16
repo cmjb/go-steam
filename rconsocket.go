@@ -2,16 +2,19 @@ package steam
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 type rconSocket struct {
 	conn net.Conn
 }
+
+var socketTimeout = 2 * time.Second
 
 func newRCONSocket(dial DialFn, addr string) (*rconSocket, error) {
 	conn, err := dial("tcp", addr)
@@ -22,11 +25,15 @@ func newRCONSocket(dial DialFn, addr string) (*rconSocket, error) {
 }
 
 func (s *rconSocket) close() {
-	s.conn.Close()
+	err := s.conn.Close()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 }
 
 func (s *rconSocket) send(p []byte) error {
-	if err := s.conn.SetWriteDeadline(time.Now().Add(400 * time.Millisecond)); err != nil {
+	if err := s.conn.SetWriteDeadline(time.Now().Add(socketTimeout)); err != nil {
 		return err
 	}
 	_, err := s.conn.Write(p)
@@ -53,7 +60,7 @@ func (s *rconSocket) receive() (_ []byte, err error) {
 			"bytes": total,
 		}).Debug("steam: reading")
 		b := make([]byte, total)
-		if err := s.conn.SetReadDeadline(time.Now().Add(400 * time.Millisecond)); err != nil {
+		if err := s.conn.SetReadDeadline(time.Now().Add(socketTimeout)); err != nil {
 			return nil, err
 		}
 		n, err := s.conn.Read(b)

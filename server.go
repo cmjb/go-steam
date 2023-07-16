@@ -3,12 +3,12 @@ package steam
 import (
 	"bytes"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net"
 	"sync"
 	"time"
 
-	logrus "github.com/Sirupsen/logrus"
+	logrus "github.com/sirupsen/logrus"
 )
 
 type DialFn func(network, address string) (net.Conn, error)
@@ -52,7 +52,7 @@ func Connect(addr string, os ...*ConnectOptions) (_ *Server, err error) {
 	}
 	if s.dial == nil {
 		s.dial = (&net.Dialer{
-			Timeout: 1 * time.Second,
+			Timeout: socketTimeout,
 		}).Dial
 	}
 	if err := s.init(); err != nil {
@@ -174,7 +174,11 @@ func (s *Server) Ping() (time.Duration, error) {
 	defer s.mu.Unlock()
 	req, _ := infoRequest{}.marshalBinary()
 	start := time.Now()
-	s.usock.send(req)
+	err := s.usock.send(req)
+	if err != nil {
+
+		return 0, err
+	}
 	if _, err := s.usock.receive(); err != nil {
 		return 0, err
 	}
@@ -335,5 +339,5 @@ func SetLog(l *logrus.Logger) {
 
 func init() {
 	log = logrus.New()
-	log.Out = ioutil.Discard
+	log.Out = io.Discard
 }
